@@ -3,7 +3,8 @@ name: Ghaoui's Daily Commit
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # Every day at midnight UTC to runs every 7-8 min set cron to '*/1 * * * *'
+    - cron: '0 0 * * *'          # Every day at midnight UTC
+    # To test every minute, use: '*/1 * * * *'
 
 jobs:
   commit:
@@ -13,26 +14,42 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
-        ref: main 
+        ref: main
 
-    - name: Create file and commit
-      run: |
-        FILE="commit_number.md"
-        if [ ! -f "$FILE" ]; then
-          echo "Hello, my name is YOUSSEF GHAOUI" > "$FILE"
-          echo "commit number: 1" >> "$FILE"
-        else
-          CURRENT_COUNT=$(grep -oP 'commit number: \K\d+' "$FILE")
-          if [ -z "$CURRENT_COUNT" ]; then
-            CURRENT_COUNT=0
-          fi
-          NEXT_COUNT=$((CURRENT_COUNT + 1))
-          sed -i "/commit number: /c\commit number: $NEXT_COUNT" "$FILE"
-        fi
-        git config --global user.name "GhaouiYoussef"
-        git config --global user.email "youssef.ghaoui@ensi-uma.tn"
-        git add "$FILE"
-        git commit -m "Hello, my name is Youssef Ghaoui nice to meet you"
-        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/GhaouiYoussef/JupyterOrganizer.git
+    - name: Create a random number (1-5) of commits
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Pick a random integer between 1 and 5 (inclusive)
+        COMMITS=$(( ( RANDOM % 5 ) + 1 ))
+        echo "👉  Will make $COMMITS commit(s) this run."
+
+        FILE="commit_number.md"
+
+        # Ensure the file exists and is initialized
+        if [ ! -f "$FILE" ]; then
+          echo "Hello, my name is YOUSSEF GHAOUI" > "$FILE"
+          echo "commit number: 0" >> "$FILE"
+        fi
+
+        # Configure Git identity
+        git config --global user.name  "GhaouiYoussef"
+        git config --global user.email "youssef.ghaoui@ensi-uma.tn"
+
+        # Loop and create the requested number of commits
+        for i in $(seq 1 "$COMMITS"); do
+          CURRENT_COUNT=$(grep -oP 'commit number: \K\d+' "$FILE" || echo 0)
+          NEXT_COUNT=$(( CURRENT_COUNT + 1 ))
+
+          # Update the counter line
+          sed -i "/commit number: /c\commit number: $NEXT_COUNT" "$FILE"
+
+          git add "$FILE"
+          git commit -m "Automated commit #$NEXT_COUNT"
+
+          # Optional: short pause to ensure distinct commit times
+          sleep 1
+        done
+
+        # Push all new commits in a single network operation
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/GhaouiYoussef/JupyterOrganizer.git
